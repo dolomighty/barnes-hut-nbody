@@ -269,6 +269,54 @@ void ModelNBody::InitCollision()
     PODState &st        = m_pInitial[i];
     PODAuxState &st_aux = m_pAux[i];
 
+//    if (i==0)
+//    {
+//      // particle zero is special its the trace particle that is not part
+//      // of the simulation and can be positioned with the mouse
+//      blackHole.m_pState = &st;
+//      blackHole.m_pAuxState = &st_aux;
+//
+//      st.x  = st.y = 0;
+//      st.vx = st.vy = 0;
+//      st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
+//    }
+//    else if (i<4000)
+//    {
+//      const double rad = 10;
+//      double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
+//      double a = 2.0*M_PI*((double)rand() / RAND_MAX);
+//      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//      st.x = r*sin(a);
+//      st.y = r*cos(a);
+//
+//      GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
+//    }
+//    else if (i==4000)
+//    {
+//      blackHole2.m_pState = &st;
+//      blackHole2.m_pAuxState = &st_aux;
+//
+//      st.x = st.y = 10;
+//      st_aux.mass = 100000;
+//      GetOrbitalVelocity(blackHole, blackHole2);
+//      blackHole2.m_pState->vx *= 0.9;
+//      blackHole2.m_pState->vy *= 0.9;
+//    }
+//    else
+//    {
+//      const double rad = 3;
+//      double r = 0.1 + .8 *  (rad * ((double)rand() / RAND_MAX));
+//      double a = 2.0*M_PI*((double)rand() / RAND_MAX);
+//      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//      st.x = blackHole2.m_pState->x + r*sin(a);
+//      st.y = blackHole2.m_pState->y + r*cos(a);
+//
+//      GetOrbitalVelocity(blackHole2, ParticleData(&st, &st_aux));
+//      st.vx+=blackHole2.m_pState->vx;
+//      st.vy+=blackHole2.m_pState->vy;
+//    }
+
+
     if (i==0)
     {
       // particle zero is special its the trace particle that is not part
@@ -279,41 +327,15 @@ void ModelNBody::InitCollision()
       st.x  = st.y = 0;
       st.vx = st.vy = 0;
       st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
-    }
-    else if (i<4000)
-    {
+//      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+    }else{
       const double rad = 10;
       double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
       double a = 2.0*M_PI*((double)rand() / RAND_MAX);
       st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
       st.x = r*sin(a);
       st.y = r*cos(a);
-
       GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
-    }
-    else if (i==4000)
-    {
-      blackHole2.m_pState = &st;
-      blackHole2.m_pAuxState = &st_aux;
-
-      st.x = st.y = 10;
-      st_aux.mass = 100000;
-      GetOrbitalVelocity(blackHole, blackHole2);
-      blackHole2.m_pState->vx *= 0.9;
-      blackHole2.m_pState->vy *= 0.9;
-    }
-    else
-    {
-      const double rad = 3;
-      double r = 0.1 + .8 *  (rad * ((double)rand() / RAND_MAX));
-      double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
-      st.x = blackHole2.m_pState->x + r*sin(a);
-      st.y = blackHole2.m_pState->y + r*cos(a);
-
-      GetOrbitalVelocity(blackHole2, ParticleData(&st, &st_aux));
-      st.vx+=blackHole2.m_pState->vx;
-      st.vy+=blackHole2.m_pState->vy;
     }
 
     // determine the size of the area including all particles
@@ -353,7 +375,7 @@ void ModelNBody::Init3Body()
 {
   // Reset model size
   ResetDim(3, .5);
-  m_root.SetTheta(0.9);
+  m_root.SetTheta(0.0);
   PODState *st(NULL);
   PODAuxState *st_aux(NULL);
 
@@ -592,3 +614,4 @@ bool ModelNBody::IsFinished(double *state)
 {
   return false;
 }
+

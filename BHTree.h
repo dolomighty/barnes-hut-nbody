@@ -88,6 +88,7 @@ private:
   */
   ParticleData m_particle;
 
+  double dd;  // quad size ²
   double m_mass;               ///< Mass of all particles inside the node
   Vec2D m_cm;                  ///< Center of Mass
   Vec2D m_min;                 ///< Upper left edge of the node
