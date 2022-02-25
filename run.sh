@@ -1,2 +1,2 @@
 #!/bin/bash
-make && dist/Debug/GNU-Linux-x86/barnes-hut-simulator
+xterm -e "make && dist/Debug/GNU-Linux-x86/barnes-hut-simulator"
