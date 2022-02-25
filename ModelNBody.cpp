@@ -14,7 +14,9 @@
 #include <iostream>
 #include <omp.h>
 
-using namespace std;
+#undef NDEBUG
+#include <assert.h>
+
 
 
 //------------------------------------------------------------------------
@@ -34,7 +36,7 @@ ModelNBody::ModelNBody()
     ,pc_in_m(3.08567758129e16)
     ,gamma_si(6.67428e-11)
     ,gamma_1(gamma_si/(pc_in_m*pc_in_m*pc_in_m)*mass_sun*(365.25*86400)*(365.25*86400))
-    ,time_1(sqrt( (pc_in_m*pc_in_m*pc_in_m)/(gamma_si*mass_sun) ) / (365.25*86400))
+    ,time_1(sqrt( (pc_in_m*pc_in_m*pc_in_m)/(gamma_si*mass_sun) )/(365.25*86400))
     ,m_num(0)
     ,m_bVerbose(false)
 {
@@ -117,14 +119,17 @@ void ModelNBody::GetOrbitalVelocity(const ParticleData &p1, const ParticleData &
     dist = sqrt(r[0] * r[0] + r[1] * r[1]);
 
     // Based on the distance from the sun calculate the velocity needed to maintain a circular orbit
-    double v = sqrt(gamma_1 * m1 / dist);
+    double v = sqrt(gamma_1 * m1/dist);
 
     // Calculate a suitable vector perpendicular to r for the velocity of the tracer
-    double &vx = p2.m_pState->vx,
-                 &vy = p2.m_pState->vy;
-    vx = ( r[1] / dist) * v;
-    vy = (-r[0] / dist) * v;
+    double &vx = p2.m_pState->vx;
+    double &vy = p2.m_pState->vy;
+    vx = ( r[1]/dist) * v;
+    vy = (-r[0]/dist) * v;
 }
+
+
+
 
 //------------------------------------------------------------------------
 void ModelNBody::ResetDim(int num, double stepsize)
@@ -155,12 +160,14 @@ void ModelNBody::ResetDim(int num, double stepsize)
 //------------------------------------------------------------------------------
 void ModelNBody::CalcBHArea(const ParticleData &data)
 {
-/*
-    // reset bounding box
-    m_max.x = m_max.y = std::numeric_limits<double>::min();
-    m_min.x = m_min.y = std::numeric_limits<double>::max();
+    assert(m_num>2);
 
-    for (int i=0; i<m_num; ++i)
+    // calc bbox
+    m_min.x = data.m_pState[0].x;
+    m_min.y = data.m_pState[0].y;
+    m_max.x = data.m_pState[1].x;
+    m_max.y = data.m_pState[1].y;
+    for (int i=2; i<m_num; ++i)
     {
         PODState &s = data.m_pState[i];
 
@@ -174,29 +181,107 @@ void ModelNBody::CalcBHArea(const ParticleData &data)
     // The Barnes Hut algorithm needs square shaped quadrants.
     // calculate the height of the square including all particles (and a bit more space)
     double l = 1.05 * std::max(m_max.x - m_min.x,
-                                                         m_max.y - m_min.y);
+                               m_max.y - m_min.y);
 
     // compute the center of the region including all particles
-    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
-                    m_min.y + (m_max.y - m_min.y)/2.0);
-    m_min.x = c.x - l/2.0;
-    m_max.x = c.x + l/2.0;
-    m_min.y = c.y - l/2.0;
-    m_max.y = c.y + l/2.0;
-*/
+    m_center = Vec2D((m_max.x + m_min.x)/2.0,
+                     (m_max.y + m_min.y)/2.0);
+
+    m_min.x = m_center.x - l/2.0;
+    m_max.x = m_center.x + l/2.0;
+    m_min.y = m_center.y - l/2.0;
+    m_max.y = m_center.y + l/2.0;
+
+    // m_min/max denotano una regione quadrata
+
+//    std::cout << "Bounding box:\n";
+//    std::cout << "----------------------------------\n";
+//    std::cout << "  min " << m_min.x << "," << m_min.y << "\n";
+//    std::cout << "  max " << m_max.x << "," << m_max.y << "\n";
+//    std::cout << "  center " << m_center.x << "," << m_center.y << "\n";
 }
+
+
+
+
+
+
+////------------------------------------------------------------------------------
+///** \brief Build the barnes hut tree by adding all particles that are inside
+//                     the region of interest.
+//*/
+//void ModelNBody::BuiltTree(const ParticleData &all)
+//{
+//    // Reset the quadtree, make sure only particles inside the roi
+//    // are handled. The renegade ones may live long and prosper
+//    // outside my simulation
+//    m_root.Reset(Vec2D(m_center.x - m_roi, m_center.y - m_roi),
+//                 Vec2D(m_center.x + m_roi, m_center.y + m_roi));
+//
+//    // build the quadtree
+//    int ct = 0;
+//    for (int i=0; i<m_num; ++i)
+//    {
+////    PODState *st = &(all.m_pState[i]);
+//
+//        try
+//        {
+//            // extract data for a single particle
+//            ParticleData p(&(all.m_pState[i]),
+//                                         &(all.m_pAuxState[i]));
+//
+//            // insert the particle, but only if its inside the roi
+//            m_root.Insert(p, 0);
+//            ++ct;
+//        }
+//        catch(std::exception &exc)
+//        {
+///*
+//            std::cout << exc.what() << "\n";
+//            std::cout << "Particle " << i << " (" << st->x << ", " << st->y << ") is outside the roi (skipped).\n";
+//            std::cout << "  roi size   =   " << m_roi << "\n";
+//            std::cout << "  roi center = (" << m_center.x << ", " << m_center.y << ")\n";
+//*/
+//        }
+//    }
+//
+////  std::cout << ct << " particles added sucessfully\n";
+//
+//    // compute masses and center of mass on all scales of the tree
+//    m_root.ComputeMassDistribution();
+//    if (m_bVerbose)
+//    {
+//        std::cout << "Tree Dump\n";
+//        std::cout << "---------\n";
+//        m_root.DumpNode(-1, 0);
+//        std::cout << "\n\n";
+//    }
+//
+//    // update the center of mass
+//    m_center = m_root.GetCenterOfMass();
+//}
+
+
+
+
+
+
+
+
 
 //------------------------------------------------------------------------------
 /** \brief Build the barnes hut tree by adding all particles that are inside
                      the region of interest.
 */
-void ModelNBody::BuiltTree(const ParticleData &all)
+void ModelNBody::BuiltTree( const ParticleData &all )
 {
     // Reset the quadtree, make sure only particles inside the roi
     // are handled. The renegade ones may live long and prosper
     // outside my simulation
     m_root.Reset(Vec2D(m_center.x - m_roi, m_center.y - m_roi),
-                             Vec2D(m_center.x + m_roi, m_center.y + m_roi));
+                 Vec2D(m_center.x + m_roi, m_center.y + m_roi));
+//    m_root.Reset(Vec2D(m_min.x, m_min.y),
+//                 Vec2D(m_max.x, m_max.y));
 
     // build the quadtree
     int ct = 0;
@@ -240,6 +325,11 @@ void ModelNBody::BuiltTree(const ParticleData &all)
     // update the center of mass
     m_center = m_root.GetCenterOfMass();
 }
+
+
+
+
+
 
 //------------------------------------------------------------------------
 const PODAuxState* ModelNBody::GetAuxState() const
@@ -385,7 +475,7 @@ bool ModelNBody::IsFinished(double *state)
 //
 //                // particle zero is special its the trace particle that is not part
 //                // of the simulation and can be positioned with the mouse
-//                st_aux.mass = blackHole.m_pAuxState->mass / 10.0;
+//                st_aux.mass = blackHole.m_pAuxState->mass/10.0;
 //                st.x = 5000;
 //                st.y = 5000;
 //
@@ -399,7 +489,7 @@ bool ModelNBody::IsFinished(double *state)
 //
 //                // particle zero is special its the trace particle that is not part
 //                // of the simulation and can be positioned with the mouse
-//                st_aux.mass = blackHole.m_pAuxState->mass / 10.0;
+//                st_aux.mass = blackHole.m_pAuxState->mass/10.0;
 //                st.x = -5000;
 //                st.y = -5000;
 //
@@ -407,7 +497,7 @@ bool ModelNBody::IsFinished(double *state)
 //            }
 //            else
 //            {
-//                st_aux.mass = 0.76 + 100 * ((double)rand() / RAND_MAX);
+//                st_aux.mass = 0.76 + 100 * ((double)rand()/RAND_MAX);
 //                double rad = (12+k)*10;
 //                st.x = rad*sin(2*M_PI * l/100.0);
 //                st.y = rad*cos(2*M_PI * l/100.0);
@@ -498,9 +588,9 @@ bool ModelNBody::IsFinished(double *state)
 //        else if (i<4000)
 //        {
 //          const double rad = 10;
-//          double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
-//          double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-//          st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//          double r = 0.1 + .8 * (rad * ((double)rand()/RAND_MAX));
+//          double a = 2.0*M_PI*((double)rand()/RAND_MAX);
+//          st_aux.mass = 0.03 + 20 * ((double)rand()/RAND_MAX);
 //          st.x = r*sin(a);
 //          st.y = r*cos(a);
 //
@@ -520,9 +610,9 @@ bool ModelNBody::IsFinished(double *state)
 //        else
 //        {
 //          const double rad = 3;
-//          double r = 0.1 + .8 *  (rad * ((double)rand() / RAND_MAX));
-//          double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-//          st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//          double r = 0.1 + .8 *  (rad * ((double)rand()/RAND_MAX));
+//          double a = 2.0*M_PI*((double)rand()/RAND_MAX);
+//          st_aux.mass = 0.03 + 20 * ((double)rand()/RAND_MAX);
 //          st.x = blackHole2.m_pState->x + r*sin(a);
 //          st.y = blackHole2.m_pState->y + r*cos(a);
 //
@@ -607,12 +697,12 @@ bool ModelNBody::IsFinished(double *state)
 //            st.x  = st.y = 0;
 //            st.vx = st.vy = 0;
 //            st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
-////      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+////      st_aux.mass = 0.03 + 20 * ((double)rand()/RAND_MAX);
 //        }else{
 //            const double rad = 10;
-//            double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
-//            double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-//            st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//            double r = 0.1 + .8 * (rad * ((double)rand()/RAND_MAX));
+//            double a = 2.0*M_PI*((double)rand()/RAND_MAX);
+//            st_aux.mass = 0.03 + 20 * ((double)rand()/RAND_MAX);
 //            st.x = r*sin(a);
 //            st.y = r*cos(a);
 //            GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
@@ -741,7 +831,7 @@ void ModelNBody::Init()
 
 
     // Reset model size
-    ResetDim(10000, 100);
+    ResetDim( 5000, 100 );
 
     // initialize particles
     ParticleData blackHole;
@@ -751,13 +841,11 @@ void ModelNBody::Init()
         PODState &st        = m_pInitial[i];
         PODAuxState &st_aux = m_pAux[i];
 
-        const double rad = 10;
-        double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
-        double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-        st_aux.mass = 1 + 20 * ((double)rand()/RAND_MAX);
+        st.x = 10 * (rand()*2.0/RAND_MAX-1.0);
+        st.y = 10 * (rand()*2.0/RAND_MAX-1.0);
+
+        st_aux.mass = 10000 + 1000 * ((double)rand()/RAND_MAX);
         if(1&rand()) st_aux.mass = -st_aux.mass;
-        st.x = r*sin(a);
-        st.y = r*cos(a);
 
         // determine the size of the area including all particles
         m_max.x = std::max(m_max.x, st.x);
