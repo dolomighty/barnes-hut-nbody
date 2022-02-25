@@ -367,137 +367,155 @@ void NBodyWnd::DrawNode(BHTreeNode *pNode, int level)
   }
 }
 
-//------------------------------  double len = 0.01 * std::max(1 - level*0.2, 0.1);------------------------------------------------
-void NBodyWnd::OnProcessEvents(uint8_t type)
+
+void NBodyWnd::zoom( float scale ){
+    ScaleAxis(scale);
+    SetCameraOrientation(Vec3D(0,1,0));
+}
+
+
+void NBodyWnd::OnProcessEvents( const SDL_Event &event )
 {
-  switch (type)
-  {
-    case SDL_MOUSEBUTTONDOWN:
+    switch (event.type)
+    {
+        case SDL_MOUSEBUTTONDOWN:
         {
-          if (!m_pSolver)
-            break;
+            switch( event.button.button )
+            {
+                case SDL_BUTTON_WHEELUP:
+                    zoom(0.9);
+                    break;
+                case SDL_BUTTON_WHEELDOWN:
+                    zoom(1.1);
+                    break;
+            }
 
-          PODState *state = reinterpret_cast<PODState*>(m_pSolver->GetState());
-          Vec3D p = GetOGLPos(m_event.button.x,
-                              m_event.button.y);
-          state[0].x = p.x;
-          state[0].y = p.y;
-          SetCamera(p, p, Vec3D(0, 1, 0));
-
-          // the solver may need to rest its temporary arrays. I can't just
-          // overwirte part of its data ADB schemes will go mad
-          // if i change a particles position. without restarting the engine
-          m_pSolver->SetInitialState(reinterpret_cast<double*>(state));
-          m_pSolver->SingleStep();
+//            // 2022-02-25 13:42:02
+//            // non funza, la disattivo per ora
+//            // inoltre in SDL1 la rotella genera SDL_MOUSEBUTTONDOWN
+//
+//            if (!m_pSolver)
+//                break;
+//
+//            PODState *state = reinterpret_cast<PODState*>(m_pSolver->GetState());
+//            Vec3D p = GetOGLPos(m_event.button.x,
+//            m_event.button.y);
+//            state[0].x = p.x;
+//            state[0].y = p.y;
+//            SetCamera(p, p, Vec3D(0, 1, 0));
+//
+//            // the solver may need to rest its temporary arrays. I can't just
+//            // overwirte part of its data ADB schemes will go mad
+//            // if i change a particles position. without restarting the engine
+//            m_pSolver->SetInitialState(reinterpret_cast<double*>(state));
+//            m_pSolver->SingleStep();
         }
         break;
 
-    case SDL_KEYDOWN:
+        case SDL_KEYDOWN:
         switch (m_event.key.keysym.sym)
         {
-          case SDLK_1:
-               m_camOrient = 0;
-               break;
+        case SDLK_1:
+            m_camOrient = 0;
+            break;
 
-          case SDLK_2:
-               m_camOrient = 1;
-               break;
+        case SDLK_2:
+            m_camOrient = 1;
+            break;
 
-          case SDLK_a:
-                std::cout << "Display:  Toggling axis " << ((m_flags & dspAXIS) ? "off" : "on") << "\n";
-                m_flags ^= dspAXIS;
-                break;
+        case SDLK_a:
+            std::cout << "Display:  Toggling axis " << ((m_flags & dspAXIS) ? "off" : "on") << "\n";
+            m_flags ^= dspAXIS;
+            break;
 
-          case  SDLK_b:
-                std::cout << "Display:  Toggling bodies " << ((m_flags & dspBODIES) ? "off" : "on") << "\n";
-                m_flags ^= dspBODIES;
-                break;
+        case  SDLK_b:
+            std::cout << "Display:  Toggling bodies " << ((m_flags & dspBODIES) ? "off" : "on") << "\n";
+            m_flags ^= dspBODIES;
+            break;
 
-          case  SDLK_t:
+        case  SDLK_t:
+            {
+                if (!(m_flags & dspTREE))
                 {
-                  if (!(m_flags & dspTREE))
-                  {
                     m_flags ^= dspTREE;
                     std::cout << "Display:  Tree cells used in force calculation\n";
-                  }
-                  else if ( (m_flags & dspTREE) && !(m_flags & dspTREE_COMPLETE))
-                  {
+                }
+                else 
+                if ( (m_flags & dspTREE) && !(m_flags & dspTREE_COMPLETE))
+                {
                     m_flags ^= dspTREE_COMPLETE;
                     std::cout << "Display:  Complete tree\n";
-                  }
-                  else if ( (m_flags & dspTREE) && (m_flags & dspTREE_COMPLETE))
-                  {
+                }
+                else
+                if ( (m_flags & dspTREE) && (m_flags & dspTREE_COMPLETE))
+                {
                     m_flags &= ~(dspTREE | dspTREE_COMPLETE);
                     std::cout << "Display:  No tree\n";
-                  }
                 }
-                break;
-
-          case  SDLK_c:
-                std::cout << "Display:  Center of mass " << ((m_flags & dspCENTER_OF_MASS) ? "off" : "on") << "\n";
-                m_flags ^= dspCENTER_OF_MASS;
-                break;
-
-          case  SDLK_h:
-                std::cout << "Display:  Help text" << ((m_flags & dspHELP) ? "off" : "on") << "\n";
-                m_flags ^= dspHELP;
-                m_flags &= ~dspSTAT;
-                break;
-
-          case  SDLK_PAUSE:
-                std::cout << "Simulation:  pause " << ((m_flags & dspPAUSE) ? "off" : "on") << "\n";
-                m_flags ^= dspPAUSE;
-                break;
-
-          case  SDLK_v:
-                std::cout << "Simulation:  verbose mode " << ((m_flags & dspVERBOSE) ? "off" : "on") << "\n";
-                m_flags ^= dspVERBOSE;
-                if (m_pModel)
-                  m_pModel->SetVerbose(m_flags & dspVERBOSE);
-                break;
-
-          case  SDLK_s:
-                std::cout << "Display:  statistics " << ((m_flags & dspSTAT) ? "off" : "on") << "\n";
-                m_flags ^= dspSTAT;
-                break;
-
-          case  SDLK_f:
-                std::cout << "Display:  force indicator " << ((m_flags & dspARROWS) ? "off" : "on") << "\n";
-                m_flags ^= dspARROWS;
-                break;
-
-          case SDLK_r:
-               std::cout << "Display:  region of interest " << ((m_flags & dspROI) ? "off" : "on") << "\n";
-               m_flags ^= dspROI;
-               break;
-
-          case SDLK_p:
-               SaveToTGA();
-               break;
-
-          case SDLK_y:
-               m_pModel->SetTheta(m_pModel->GetTheta() + 0.1);
-               break;
-
-          case SDLK_x:
-               m_pModel->SetTheta(std::max(m_pModel->GetTheta() - 0.1, 0.1));
-               break;
-
-          case SDLK_KP_PLUS:
-               ScaleAxis(0.9);
-               SetCameraOrientation(Vec3D(0,1,0));
-               break;
-
-          case SDLK_KP_MINUS:
-               ScaleAxis(1.1);
-               SetCameraOrientation(Vec3D(0,1,0));
-               break;
-
-          default:
-               break;
-
-        }
-
+            }
         break;
-  }
+
+        case  SDLK_c:
+            std::cout << "Display:  Center of mass " << ((m_flags & dspCENTER_OF_MASS) ? "off" : "on") << "\n";
+            m_flags ^= dspCENTER_OF_MASS;
+            break;
+
+        case  SDLK_h:
+            std::cout << "Display:  Help text" << ((m_flags & dspHELP) ? "off" : "on") << "\n";
+            m_flags ^= dspHELP;
+            m_flags &= ~dspSTAT;
+            break;
+
+        case  SDLK_PAUSE:
+            std::cout << "Simulation:  pause " << ((m_flags & dspPAUSE) ? "off" : "on") << "\n";
+            m_flags ^= dspPAUSE;
+            break;
+
+        case  SDLK_v:
+            std::cout << "Simulation:  verbose mode " << ((m_flags & dspVERBOSE) ? "off" : "on") << "\n";
+            m_flags ^= dspVERBOSE;
+            if (m_pModel)
+                m_pModel->SetVerbose(m_flags & dspVERBOSE);
+            break;
+
+        case  SDLK_s:
+            std::cout << "Display:  statistics " << ((m_flags & dspSTAT) ? "off" : "on") << "\n";
+            m_flags ^= dspSTAT;
+            break;
+
+        case  SDLK_f:
+            std::cout << "Display:  force indicator " << ((m_flags & dspARROWS) ? "off" : "on") << "\n";
+            m_flags ^= dspARROWS;
+            break;
+
+        case SDLK_r:
+            std::cout << "Display:  region of interest " << ((m_flags & dspROI) ? "off" : "on") << "\n";
+            m_flags ^= dspROI;
+            break;
+
+        case SDLK_p:
+            SaveToTGA();
+            break;
+
+        case SDLK_y:
+            m_pModel->SetTheta(m_pModel->GetTheta() + 0.1);
+            break;
+
+        case SDLK_x:
+            m_pModel->SetTheta(std::max(m_pModel->GetTheta() - 0.1, 0.1));
+            break;
+
+        case SDLK_KP_PLUS:
+            zoom(0.9);
+            break;
+
+        case SDLK_KP_MINUS:
+            zoom(1.1);
+            break;
+
+        default:
+            break;
+        }
+        break;
+    }
 }

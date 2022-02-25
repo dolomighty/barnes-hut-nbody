@@ -1,2 +1,2 @@
 #!/bin/bash
-xterm -e "make clobber ; sleep 2"
+xterm -e "make clobber ; rm -f *.tga ; sleep 2"

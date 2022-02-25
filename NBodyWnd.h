@@ -28,7 +28,7 @@ public:
     virtual ~NBodyWnd();
 
     virtual void Render();
-    virtual void OnProcessEvents(uint8_t type);
+    virtual void OnProcessEvents( const SDL_Event &event );
 
     void Init(int num);
 
@@ -59,6 +59,7 @@ private:
     void DrawROI();
     void DrawCenterOfMass();
     void DrawNode(BHTreeNode *pNode, int level);
+    void zoom( float scale );
 
     ModelNBody *m_pModel;
     IIntegrator *m_pSolver;

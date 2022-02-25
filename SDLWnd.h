@@ -32,7 +32,7 @@ public:
 protected:
 
   virtual void PollEvents();
-  virtual void OnProcessEvents(uint8_t type);
+  virtual void OnProcessEvents( const SDL_Event &event );
 
   //-----------------------------------------
   // Camera setup
