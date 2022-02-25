@@ -40,10 +40,14 @@ ModelNBody::ModelNBody()
 {
     BHTreeNode::s_gamma = gamma_1;
 
-    Init();
-//  InitCollision();
-//  Init3Body();
+    Init();     // in fondo al file
 }
+
+
+
+
+
+
 
 //------------------------------------------------------------------------
 ModelNBody::~ModelNBody()
@@ -142,335 +146,11 @@ void ModelNBody::ResetDim(int num, double stepsize)
     m_center = Vec2D(0,0);    // for storing the center of mass
 }
 
-//------------------------------------------------------------------------
-void ModelNBody::Init()
-{
-    // Reset model size
-    ResetDim(4000, 100000);
 
-    double mass = 0;  // for storing the total mass
 
-    // initialize particles
-    int ct = 0;
-    ParticleData blackHole, macho[10];
 
-    for (int k=0; k<40; ++k)
-    {
-        for (int l=0; l<100; ++l)
-        {
-            if (ct>=m_num)
-                goto hell;
 
-            PODState &st        = m_pInitial[ct];
-            PODAuxState &st_aux = m_pAux[ct];
 
-            if (ct==0)
-            {
-                blackHole.m_pState = &st;
-                blackHole.m_pAuxState = &st_aux;
-
-                // particle zero is special its the trace particle that is not part
-                // of the simulation and can be positioned with the mouse
-                st.x  = st.y = 0;
-                st.vx = st.vy = 0;
-                st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
-            }
-            else if (ct==1)
-            {
-                // macho im galaktischen halo, der hoffentlich ein paar spiralarme erzeugt
-                macho[0].m_pState = &st;
-                macho[0].m_pAuxState = &st_aux;
-
-                // particle zero is special its the trace particle that is not part
-                // of the simulation and can be positioned with the mouse
-                st_aux.mass = blackHole.m_pAuxState->mass / 10.0;
-                st.x = 5000;
-                st.y = 5000;
-
-                GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
-            }
-            else if (ct==2)
-            {
-                // macho im galaktischen halo, der hoffentlich ein paar spiralarme erzeugt
-                macho[1].m_pState = &st;
-                macho[1].m_pAuxState = &st_aux;
-
-                // particle zero is special its the trace particle that is not part
-                // of the simulation and can be positioned with the mouse
-                st_aux.mass = blackHole.m_pAuxState->mass / 10.0;
-                st.x = -5000;
-                st.y = -5000;
-
-                GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
-            }
-            else
-            {
-                st_aux.mass = 0.76 + 100 * ((double)rand() / RAND_MAX);
-                double rad = (12+k)*10;
-                st.x = rad*sin(2*M_PI * l/100.0);
-                st.y = rad*cos(2*M_PI * l/100.0);
-                GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
-            }
-
-            // determine the size of the area including all particles
-            m_max.x = std::max(m_max.x, st.x);
-            m_max.y = std::max(m_max.y, st.y);
-            m_min.x = std::min(m_min.x, st.x);
-            m_min.y = std::min(m_min.y, st.y);
-
-            m_center.x += st.x * st_aux.mass;
-            m_center.y += st.x * st_aux.mass;
-            mass += st_aux.mass;
-            ++ct;
-        }
-
-    }
-
-
-hell:   /////////////////////////////////////////////
-
-
-    // compute the center of mass
-    m_center.x /= mass;
-    m_center.y /= mass;
-
-    // The Barnes Hut algorithm needs square shaped quadrants.
-    // calculate the height of the square including all particles (and a bit more space)
-    m_roi  = 1.5 * std::max(m_max.x - m_min.x,
-                                                    m_max.y - m_min.y);
-
-    // compute the center of the region including all particles
-    m_min.x = m_center.x - m_roi;
-    m_max.x = m_center.x + m_roi;
-    m_min.y = m_center.y - m_roi;
-    m_max.y = m_center.y + m_roi;
-
-    std::cout << "Initial particle distribution area\n";
-    std::cout << "----------------------------------\n";
-    std::cout << "Particle spread:\n";
-    std::cout << "  xmin   = " << m_min.x << ", ymin=" << m_min.y << "\n";
-    std::cout << "  xmax   = " << m_max.y << ", ymax=" << m_max.y << "\n";
-    std::cout << "Bounding box:\n";
-    std::cout << "  center = " << m_center.x   << ", cy  =" << m_center.y   << "\n";
-    std::cout << "  roi    = " << m_roi << "\n";
-}
-
-
-//------------------------------------------------------------------------
-void ModelNBody::InitCollision()
-{
-    // Reset model size
-    ResetDim(5000, 100);
-
-    // initialize particles
-    ParticleData blackHole;
-    ParticleData blackHole2;
-
-    for (int i=0; i<m_num; ++i)
-    {
-        PODState &st        = m_pInitial[i];
-        PODAuxState &st_aux = m_pAux[i];
-
-
-
-
-
-
-
-
-
-
-//    if (i==0)
-//    {
-//      // particle zero is special its the trace particle that is not part
-//      // of the simulation and can be positioned with the mouse
-//      blackHole.m_pState = &st;
-//      blackHole.m_pAuxState = &st_aux;
-//
-//      st.x  = st.y = 0;
-//      st.vx = st.vy = 0;
-//      st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
-//    }
-//    else if (i<4000)
-//    {
-//      const double rad = 10;
-//      double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
-//      double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-//      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
-//      st.x = r*sin(a);
-//      st.y = r*cos(a);
-//
-//      GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
-//    }
-//    else if (i==4000)
-//    {
-//      blackHole2.m_pState = &st;
-//      blackHole2.m_pAuxState = &st_aux;
-//
-//      st.x = st.y = 10;
-//      st_aux.mass = 100000;
-//      GetOrbitalVelocity(blackHole, blackHole2);
-//      blackHole2.m_pState->vx *= 0.9;
-//      blackHole2.m_pState->vy *= 0.9;
-//    }
-//    else
-//    {
-//      const double rad = 3;
-//      double r = 0.1 + .8 *  (rad * ((double)rand() / RAND_MAX));
-//      double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-//      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
-//      st.x = blackHole2.m_pState->x + r*sin(a);
-//      st.y = blackHole2.m_pState->y + r*cos(a);
-//
-//      GetOrbitalVelocity(blackHole2, ParticleData(&st, &st_aux));
-//      st.vx+=blackHole2.m_pState->vx;
-//      st.vy+=blackHole2.m_pState->vy;
-//    }
-
-
-
-
-
-
-
-
-
-
-
-
-        if (i==0)
-        {
-            // particle zero is special its the trace particle that is not part
-            // of the simulation and can be positioned with the mouse
-            blackHole.m_pState = &st;
-            blackHole.m_pAuxState = &st_aux;
-
-            st.x  = st.y = 0;
-            st.vx = st.vy = 0;
-            st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
-//      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
-        }else{
-            const double rad = 10;
-            double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
-            double a = 2.0*M_PI*((double)rand() / RAND_MAX);
-            st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
-            st.x = r*sin(a);
-            st.y = r*cos(a);
-            GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // determine the size of the area including all particles
-        m_max.x = std::max(m_max.x, st.x);
-        m_max.y = std::max(m_max.y, st.y);
-        m_min.x = std::min(m_min.x, st.x);
-        m_min.y = std::min(m_min.y, st.y);
-    }
-
-    // The Barnes Hut algorithm needs square shaped quadrants.
-    // calculate the height of the square including all particles (and a bit more space)
-    double l = 1.05 * std::max(m_max.x - m_min.x,
-                                                         m_max.y - m_min.y);
-
-    m_roi = l * 1.5;
-
-    // compute the center of the region including all particles
-    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
-                    m_min.y + (m_max.y - m_min.y)/2.0);
-    m_min.x = c.x - l/2.0;
-    m_max.x = c.x + l/2.0;
-    m_min.y = c.y - l/2.0;
-    m_max.y = c.y + l/2.0;
-
-    std::cout << "Initial particle distribution area\n";
-    std::cout << "----------------------------------\n";
-    std::cout << "Particle spread:\n";
-    std::cout << "  xmin=" << m_min.x << ", ymin=" << m_min.y << "\n";
-    std::cout << "  xmax=" << m_max.y << ", ymax=" << m_max.y << "\n";
-    std::cout << "Bounding box:\n";
-    std::cout << "  cx =" << c.x   << ", cy  =" << c.y   << "\n";
-    std::cout << "  l  =" << l << "\n";
-}
-
-//------------------------------------------------------------------------------
-void ModelNBody::Init3Body()
-{
-    // Reset model size
-    ResetDim(3, .5);
-    m_root.SetTheta(0.0);
-    PODState *st(NULL);
-    PODAuxState *st_aux(NULL);
-
-    // initialize particles
-    st     = &m_pInitial[0];
-    st_aux = &m_pAux[0];
-    st->x  = 1;
-    st->y  = 3;
-    st->vx = st->vy = 0;
-    st_aux->mass = 3;
-
-    st     = &m_pInitial[1];
-    st_aux = &m_pAux[1];
-    st->x  = -2;
-    st->y  = -1;
-    st->vx = st->vy = 0;
-    st_aux->mass = 4;
-
-    st     = &m_pInitial[2];
-    st_aux = &m_pAux[2];
-    st->x   =  1;
-    st->y   = -1;
-    st->vx  = st->vy = 0;
-    st_aux->mass = 5;
-
-    // determine the size of the area including all particles
-    for (int i=0; i<m_num; ++i)
-    {
-        PODState &st        = m_pInitial[i];
-        m_max.x = std::max(m_max.x, st.x);
-        m_max.y = std::max(m_max.y, st.y);
-        m_min.x = std::min(m_min.x, st.x);
-        m_min.y = std::min(m_min.y, st.y);
-    }
-
-    // The Barnes Hut algorithm needs square shaped quadrants.
-    // calculate the height of the square including all particles (and a bit more space)
-    double l = 1.05 * std::max(m_max.x - m_min.x,
-                                                         m_max.y - m_min.y);
-
-    m_roi = l * 1.5;
-
-    // compute the center of the region including all particles
-    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
-                    m_min.y + (m_max.y - m_min.y)/2.0);
-    m_min.x = c.x - l/2.0;
-    m_max.x = c.x + l/2.0;
-    m_min.y = c.y - l/2.0;
-    m_max.y = c.y + l/2.0;
-
-    std::cout << "Initial particle distribution area\n";
-    std::cout << "----------------------------------\n";
-    std::cout << "Particle spread:\n";
-    std::cout << "  xmin=" << m_min.x << ", ymin=" << m_min.y << "\n";
-    std::cout << "  xmax=" << m_max.y << ", ymax=" << m_max.y << "\n";
-    std::cout << "Bounding box:\n";
-    std::cout << "  cx =" << c.x   << ", cy  =" << c.y   << "\n";
-    std::cout << "  l  =" << l << "\n";
-}
 
 //------------------------------------------------------------------------------
 void ModelNBody::CalcBHArea(const ParticleData &data)
@@ -650,4 +330,472 @@ bool ModelNBody::IsFinished(double *state)
 {
     return false;
 }
+
+
+
+
+
+
+
+
+
+
+
+////------------------------------------------------------------------------
+//void ModelNBody::Init()
+//{
+//    // "galassia" formata da stelle radialmente regolarmente disposte
+//    // vari buchi neri in posizioni particolari
+//
+//    // Reset model size
+//    ResetDim(4000, 100000);
+//
+//    double mass = 0;  // for storing the total mass
+//
+//    // initialize particles
+//    int ct = 0;
+//    ParticleData blackHole, macho[10];
+//
+//    for (int k=0; k<40; ++k)
+//    {
+//        for (int l=0; l<100; ++l)
+//        {
+//            if (ct>=m_num)
+//                goto hell;
+//
+//            PODState &st        = m_pInitial[ct];
+//            PODAuxState &st_aux = m_pAux[ct];
+//
+//            if (ct==0)
+//            {
+//                blackHole.m_pState = &st;
+//                blackHole.m_pAuxState = &st_aux;
+//
+//                // particle zero is special its the trace particle that is not part
+//                // of the simulation and can be positioned with the mouse
+//                st.x  = st.y = 0;
+//                st.vx = st.vy = 0;
+//                st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
+//            }
+//            else if (ct==1)
+//            {
+//                // macho im galaktischen halo, der hoffentlich ein paar spiralarme erzeugt
+//                macho[0].m_pState = &st;
+//                macho[0].m_pAuxState = &st_aux;
+//
+//                // particle zero is special its the trace particle that is not part
+//                // of the simulation and can be positioned with the mouse
+//                st_aux.mass = blackHole.m_pAuxState->mass / 10.0;
+//                st.x = 5000;
+//                st.y = 5000;
+//
+//                GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
+//            }
+//            else if (ct==2)
+//            {
+//                // macho im galaktischen halo, der hoffentlich ein paar spiralarme erzeugt
+//                macho[1].m_pState = &st;
+//                macho[1].m_pAuxState = &st_aux;
+//
+//                // particle zero is special its the trace particle that is not part
+//                // of the simulation and can be positioned with the mouse
+//                st_aux.mass = blackHole.m_pAuxState->mass / 10.0;
+//                st.x = -5000;
+//                st.y = -5000;
+//
+//                GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
+//            }
+//            else
+//            {
+//                st_aux.mass = 0.76 + 100 * ((double)rand() / RAND_MAX);
+//                double rad = (12+k)*10;
+//                st.x = rad*sin(2*M_PI * l/100.0);
+//                st.y = rad*cos(2*M_PI * l/100.0);
+//                GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
+//            }
+//
+//            // determine the size of the area including all particles
+//            m_max.x = std::max(m_max.x, st.x);
+//            m_max.y = std::max(m_max.y, st.y);
+//            m_min.x = std::min(m_min.x, st.x);
+//            m_min.y = std::min(m_min.y, st.y);
+//
+//            m_center.x += st.x * st_aux.mass;
+//            m_center.y += st.x * st_aux.mass;
+//            mass += st_aux.mass;
+//            ++ct;
+//        }
+//
+//    }
+//
+//
+//hell:   /////////////////////////////////////////////
+//
+//
+//    // compute the center of mass
+//    m_center.x /= mass;
+//    m_center.y /= mass;
+//
+//    // The Barnes Hut algorithm needs square shaped quadrants.
+//    // calculate the height of the square including all particles (and a bit more space)
+//    m_roi  = 1.5 * std::max(m_max.x - m_min.x,
+//                                                    m_max.y - m_min.y);
+//
+//    // compute the center of the region including all particles
+//    m_min.x = m_center.x - m_roi;
+//    m_max.x = m_center.x + m_roi;
+//    m_min.y = m_center.y - m_roi;
+//    m_max.y = m_center.y + m_roi;
+//
+//    std::cout << "Initial particle distribution area\n";
+//    std::cout << "----------------------------------\n";
+//    std::cout << "Particle spread:\n";
+//    std::cout << "  xmin   = " << m_min.x << ", ymin=" << m_min.y << "\n";
+//    std::cout << "  xmax   = " << m_max.y << ", ymax=" << m_max.y << "\n";
+//    std::cout << "Bounding box:\n";
+//    std::cout << "  center = " << m_center.x   << ", cy  =" << m_center.y   << "\n";
+//    std::cout << "  roi    = " << m_roi << "\n";
+//}
+
+
+
+
+
+
+
+
+
+////------------------------------------------------------------------------
+//void ModelNBody::Init()
+//{
+//    // due galassie in collisione
+//
+//
+//    // Reset model size
+//    ResetDim(5000, 100);
+//
+//    // initialize particles
+//    ParticleData blackHole;
+//    ParticleData blackHole2;
+//
+//    for (int i=0; i<m_num; ++i)
+//    {
+//        PODState &st        = m_pInitial[i];
+//        PODAuxState &st_aux = m_pAux[i];
+//
+//
+//        if (i==0)
+//        {
+//          // particle zero is special its the trace particle that is not part
+//          // of the simulation and can be positioned with the mouse
+//          blackHole.m_pState = &st;
+//          blackHole.m_pAuxState = &st_aux;
+//
+//          st.x  = st.y = 0;
+//          st.vx = st.vy = 0;
+//          st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
+//        }
+//        else if (i<4000)
+//        {
+//          const double rad = 10;
+//          double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
+//          double a = 2.0*M_PI*((double)rand() / RAND_MAX);
+//          st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//          st.x = r*sin(a);
+//          st.y = r*cos(a);
+//
+//          GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
+//        }
+//        else if (i==4000)
+//        {
+//          blackHole2.m_pState = &st;
+//          blackHole2.m_pAuxState = &st_aux;
+//
+//          st.x = st.y = 10;
+//          st_aux.mass = 100000;
+//          GetOrbitalVelocity(blackHole, blackHole2);
+//          blackHole2.m_pState->vx *= 0.9;
+//          blackHole2.m_pState->vy *= 0.9;
+//        }
+//        else
+//        {
+//          const double rad = 3;
+//          double r = 0.1 + .8 *  (rad * ((double)rand() / RAND_MAX));
+//          double a = 2.0*M_PI*((double)rand() / RAND_MAX);
+//          st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//          st.x = blackHole2.m_pState->x + r*sin(a);
+//          st.y = blackHole2.m_pState->y + r*cos(a);
+//
+//          GetOrbitalVelocity(blackHole2, ParticleData(&st, &st_aux));
+//          st.vx+=blackHole2.m_pState->vx;
+//          st.vy+=blackHole2.m_pState->vy;
+//        }
+//
+//
+//
+//        // determine the size of the area including all particles
+//        m_max.x = std::max(m_max.x, st.x);
+//        m_max.y = std::max(m_max.y, st.y);
+//        m_min.x = std::min(m_min.x, st.x);
+//        m_min.y = std::min(m_min.y, st.y);
+//    }
+//
+//    // The Barnes Hut algorithm needs square shaped quadrants.
+//    // calculate the height of the square including all particles (and a bit more space)
+//    double l = 1.05 * std::max(m_max.x - m_min.x,
+//                                                         m_max.y - m_min.y);
+//
+//    m_roi = l * 1.5;
+//
+//    // compute the center of the region including all particles
+//    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
+//                    m_min.y + (m_max.y - m_min.y)/2.0);
+//    m_min.x = c.x - l/2.0;
+//    m_max.x = c.x + l/2.0;
+//    m_min.y = c.y - l/2.0;
+//    m_max.y = c.y + l/2.0;
+//
+//    std::cout << "Initial particle distribution area\n";
+//    std::cout << "----------------------------------\n";
+//    std::cout << "Particle spread:\n";
+//    std::cout << "  xmin=" << m_min.x << ", ymin=" << m_min.y << "\n";
+//    std::cout << "  xmax=" << m_max.y << ", ymax=" << m_max.y << "\n";
+//    std::cout << "Bounding box:\n";
+//    std::cout << "  cx =" << c.x   << ", cy  =" << c.y   << "\n";
+//    std::cout << "  l  =" << l << "\n";
+//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////------------------------------------------------------------------------
+//void ModelNBody::Init()
+//{
+//    // singola galassia 
+//
+//
+//    // Reset model size
+//    ResetDim(5000, 100);
+//
+//    // initialize particles
+//    ParticleData blackHole;
+//
+//    for (int i=0; i<m_num; ++i)
+//    {
+//        PODState &st        = m_pInitial[i];
+//        PODAuxState &st_aux = m_pAux[i];
+//
+//        if (i==0)
+//        {
+//            // particle zero is special its the trace particle that is not part
+//            // of the simulation and can be positioned with the mouse
+//            blackHole.m_pState = &st;
+//            blackHole.m_pAuxState = &st_aux;
+//
+//            st.x  = st.y = 0;
+//            st.vx = st.vy = 0;
+//            st_aux.mass = 1000000; //431000;   // 4.31 Millionen Sonnenmassen
+////      st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//        }else{
+//            const double rad = 10;
+//            double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
+//            double a = 2.0*M_PI*((double)rand() / RAND_MAX);
+//            st_aux.mass = 0.03 + 20 * ((double)rand() / RAND_MAX);
+//            st.x = r*sin(a);
+//            st.y = r*cos(a);
+//            GetOrbitalVelocity(blackHole, ParticleData(&st, &st_aux));
+//        }
+//
+//
+//        // determine the size of the area including all particles
+//        m_max.x = std::max(m_max.x, st.x);
+//        m_max.y = std::max(m_max.y, st.y);
+//        m_min.x = std::min(m_min.x, st.x);
+//        m_min.y = std::min(m_min.y, st.y);
+//    }
+//
+//    // The Barnes Hut algorithm needs square shaped quadrants.
+//    // calculate the height of the square including all particles (and a bit more space)
+//    double l = 1.05 * std::max(m_max.x - m_min.x,
+//                                                         m_max.y - m_min.y);
+//
+//    m_roi = l * 1.5;
+//
+//    // compute the center of the region including all particles
+//    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
+//                    m_min.y + (m_max.y - m_min.y)/2.0);
+//    m_min.x = c.x - l/2.0;
+//    m_max.x = c.x + l/2.0;
+//    m_min.y = c.y - l/2.0;
+//    m_max.y = c.y + l/2.0;
+//
+//    std::cout << "Initial particle distribution area\n";
+//    std::cout << "----------------------------------\n";
+//    std::cout << "Particle spread:\n";
+//    std::cout << "  xmin=" << m_min.x << ", ymin=" << m_min.y << "\n";
+//    std::cout << "  xmax=" << m_max.y << ", ymax=" << m_max.y << "\n";
+//    std::cout << "Bounding box:\n";
+//    std::cout << "  cx =" << c.x   << ", cy  =" << c.y   << "\n";
+//    std::cout << "  l  =" << l << "\n";
+//}
+
+
+
+
+
+
+//------------------------------------------------------------------------------
+//void ModelNBody::Init()
+//{
+//    // 3 corpi
+//
+//
+//    // Reset model size
+//    ResetDim(3, 10);
+//    m_root.SetTheta(0.9);
+//    PODState *st(NULL);
+//    PODAuxState *st_aux(NULL);
+//
+//    // initialize particles
+//    st     = &m_pInitial[0];
+//    st_aux = &m_pAux[0];
+//    st->x  = 1;
+//    st->y  = 3;
+//    st->vx = st->vy = 0;
+//    st_aux->mass = 3e+6;
+//
+//    st     = &m_pInitial[1];
+//    st_aux = &m_pAux[1];
+//    st->x  = -2;
+//    st->y  = -1;
+//    st->vx = st->vy = 0;
+//    st_aux->mass = 4e+6;
+//
+//    st     = &m_pInitial[2];
+//    st_aux = &m_pAux[2];
+//    st->x   =  1;
+//    st->y   = -1;
+//    st->vx  = st->vy = 0;
+//    st_aux->mass = 5e+6;
+//
+//    // determine the size of the area including all particles
+//    for (int i=0; i<m_num; ++i)
+//    {
+//        PODState &st        = m_pInitial[i];
+//        m_max.x = std::max(m_max.x, st.x);
+//        m_max.y = std::max(m_max.y, st.y);
+//        m_min.x = std::min(m_min.x, st.x);
+//        m_min.y = std::min(m_min.y, st.y);
+//    }
+//
+//    // The Barnes Hut algorithm needs square shaped quadrants.
+//    // calculate the height of the square including all particles (and a bit more space)
+//    double l = 1.05 * std::max(m_max.x - m_min.x,
+//                                                         m_max.y - m_min.y);
+//
+//    m_roi = l * 1.5;
+//
+//    // compute the center of the region including all particles
+//    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
+//                    m_min.y + (m_max.y - m_min.y)/2.0);
+//    m_min.x = c.x - l/2.0;
+//    m_max.x = c.x + l/2.0;
+//    m_min.y = c.y - l/2.0;
+//    m_max.y = c.y + l/2.0;
+//
+//    std::cout << "Initial particle distribution area\n";
+//    std::cout << "----------------------------------\n";
+//    std::cout << "Particle spread:\n";
+//    std::cout << "  xmin=" << m_min.x << ", ymin=" << m_min.y << "\n";
+//    std::cout << "  xmax=" << m_max.y << ", ymax=" << m_max.y << "\n";
+//    std::cout << "Bounding box:\n";
+//    std::cout << "  cx =" << c.x   << ", cy  =" << c.y   << "\n";
+//    std::cout << "  l  =" << l << "\n";
+//}
+
+
+
+
+
+
+
+
+
+
+//------------------------------------------------------------------------
+void ModelNBody::Init()
+{
+    // nuvola di stelle, con masse ed antimasse
+
+
+    // Reset model size
+    ResetDim(10000, 100);
+
+    // initialize particles
+    ParticleData blackHole;
+
+    for (int i=0; i<m_num; ++i)
+    {
+        PODState &st        = m_pInitial[i];
+        PODAuxState &st_aux = m_pAux[i];
+
+        const double rad = 10;
+        double r = 0.1 + .8 * (rad * ((double)rand() / RAND_MAX));
+        double a = 2.0*M_PI*((double)rand() / RAND_MAX);
+        st_aux.mass = 1 + 20 * ((double)rand()/RAND_MAX);
+        if(1&rand()) st_aux.mass = -st_aux.mass;
+        st.x = r*sin(a);
+        st.y = r*cos(a);
+
+        // determine the size of the area including all particles
+        m_max.x = std::max(m_max.x, st.x);
+        m_max.y = std::max(m_max.y, st.y);
+        m_min.x = std::min(m_min.x, st.x);
+        m_min.y = std::min(m_min.y, st.y);
+    }
+
+    // The Barnes Hut algorithm needs square shaped quadrants.
+    // calculate the height of the square including all particles (and a bit more space)
+    double l = 1.05 * std::max(m_max.x - m_min.x,
+                               m_max.y - m_min.y);
+
+    m_roi = l * 1.5;
+
+    // compute the center of the region including all particles
+//    Vec2D c(m_min.x + (m_max.x - m_min.x)/2.0,
+//            m_min.y + (m_max.y - m_min.y)/2.0);
+
+    Vec2D c(
+        (m_min.x + m_max.x)/2.0,
+        (m_min.y + m_max.y)/2.0
+    );
+
+    m_min.x = c.x - l/2.0;
+    m_max.x = c.x + l/2.0;
+    m_min.y = c.y - l/2.0;
+    m_max.y = c.y + l/2.0;
+
+    std::cout << "Initial particle distribution area\n";
+    std::cout << "----------------------------------\n";
+    std::cout << "Particle spread:\n";
+    std::cout << "  xmin=" << m_min.x << ", ymin=" << m_min.y << "\n";
+    std::cout << "  xmax=" << m_max.y << ", ymax=" << m_max.y << "\n";
+    std::cout << "Bounding box:\n";
+    std::cout << "  cx =" << c.x   << ", cy  =" << c.y   << "\n";
+    std::cout << "  l  =" << l << "\n";
+}
+
+
 

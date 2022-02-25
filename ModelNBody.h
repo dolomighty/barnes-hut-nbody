@@ -25,8 +25,6 @@ public:
     virtual ~ModelNBody();
 
     void Init();
-    void InitCollision();
-    void Init3Body();
 
     virtual void Eval(double *state, double time, double *deriv);
     virtual bool IsFinished(double *state);
