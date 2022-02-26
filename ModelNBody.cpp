@@ -167,6 +167,7 @@ void ModelNBody::CalcBHArea(const ParticleData &data)
     m_min.y = data.m_pState[0].y;
     m_max.x = data.m_pState[1].x;
     m_max.y = data.m_pState[1].y;
+
     for (int i=2; i<m_num; ++i)
     {
         PODState &s = data.m_pState[i];
@@ -206,65 +207,6 @@ void ModelNBody::CalcBHArea(const ParticleData &data)
 
 
 
-////------------------------------------------------------------------------------
-///** \brief Build the barnes hut tree by adding all particles that are inside
-//                     the region of interest.
-//*/
-//void ModelNBody::BuildTree(const ParticleData &all)
-//{
-//    // Reset the quadtree, make sure only particles inside the roi
-//    // are handled. The renegade ones may live long and prosper
-//    // outside my simulation
-//    m_root.Reset(Vec2D(m_center.x - m_roi, m_center.y - m_roi),
-//                 Vec2D(m_center.x + m_roi, m_center.y + m_roi));
-//
-//    // build the quadtree
-//    int ct = 0;
-//    for (int i=0; i<m_num; ++i)
-//    {
-////    PODState *st = &(all.m_pState[i]);
-//
-//        try
-//        {
-//            // extract data for a single particle
-//            ParticleData p(&(all.m_pState[i]),
-//                                         &(all.m_pAuxState[i]));
-//
-//            // insert the particle, but only if its inside the roi
-//            m_root.Insert(p, 0);
-//            ++ct;
-//        }
-//        catch(std::exception &exc)
-//        {
-///*
-//            std::cout << exc.what() << "\n";
-//            std::cout << "Particle " << i << " (" << st->x << ", " << st->y << ") is outside the roi (skipped).\n";
-//            std::cout << "  roi size   =   " << m_roi << "\n";
-//            std::cout << "  roi center = (" << m_center.x << ", " << m_center.y << ")\n";
-//*/
-//        }
-//    }
-//
-////  std::cout << ct << " particles added sucessfully\n";
-//
-//    // compute masses and center of mass on all scales of the tree
-//    m_root.ComputeMassDistribution();
-//    if (m_bVerbose)
-//    {
-//        std::cout << "Tree Dump\n";
-//        std::cout << "---------\n";
-//        m_root.DumpNode(-1, 0);
-//        std::cout << "\n\n";
-//    }
-//
-//    // update the center of mass
-//    m_center = m_root.GetCenterOfMass();
-//}
-
-
-
-
-
 
 
 
@@ -293,7 +235,7 @@ void ModelNBody::BuildTree( const ParticleData &all )
         {
             // extract data for a single particle
             ParticleData p(&(all.m_pState[i]),
-                                         &(all.m_pAuxState[i]));
+                           &(all.m_pAuxState[i]));
 
             // insert the particle, but only if its inside the roi
             m_root.Insert(p, 0);
@@ -385,7 +327,7 @@ void ModelNBody::Eval(double *a_state, double a_time, double *a_deriv)
     CalcBHArea(all);
     BuildTree(all);
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int i=1; i<m_num; ++i)
     {
         ParticleData p(&pState[i], &m_pAux[i]);
