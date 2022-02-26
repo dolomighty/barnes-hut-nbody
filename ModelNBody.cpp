@@ -104,11 +104,11 @@ double* ModelNBody::GetInitialState()
 //------------------------------------------------------------------------
 void ModelNBody::GetOrbitalVelocity(const ParticleData &p1, const ParticleData &p2)
 {
-    double x1 = p1.m_pState->x,
-                 y1 = p1.m_pState->x,
-                 m1 = p1.m_pAuxState->mass;
-    double x2 = p2.m_pState->x,
-                 y2 = p2.m_pState->y;
+    double x1 = p1.m_pState->x;
+    double y1 = p1.m_pState->x;
+    double m1 = p1.m_pAuxState->mass;
+    double x2 = p2.m_pState->x;
+    double y2 = p2.m_pState->y;
 
     // Calculate distance from the planet with index idx_main
     double r[2], dist;
