@@ -49,7 +49,7 @@ public:
 private:
 
     void CalcBHArea(const ParticleData &p);
-    void BuiltTree(const ParticleData &p);
+    void BuildTree(const ParticleData &p);
     void GetOrbitalVelocity(const ParticleData &p1, const ParticleData &p2);
     void ResetDim(int num, double stepsize);
 

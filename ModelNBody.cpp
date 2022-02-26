@@ -210,7 +210,7 @@ void ModelNBody::CalcBHArea(const ParticleData &data)
 ///** \brief Build the barnes hut tree by adding all particles that are inside
 //                     the region of interest.
 //*/
-//void ModelNBody::BuiltTree(const ParticleData &all)
+//void ModelNBody::BuildTree(const ParticleData &all)
 //{
 //    // Reset the quadtree, make sure only particles inside the roi
 //    // are handled. The renegade ones may live long and prosper
@@ -273,7 +273,7 @@ void ModelNBody::CalcBHArea(const ParticleData &data)
 /** \brief Build the barnes hut tree by adding all particles that are inside
                      the region of interest.
 */
-void ModelNBody::BuiltTree( const ParticleData &all )
+void ModelNBody::BuildTree( const ParticleData &all )
 {
     // Reset the quadtree, make sure only particles inside the roi
     // are handled. The renegade ones may live long and prosper
@@ -383,7 +383,7 @@ void ModelNBody::Eval(double *a_state, double a_time, double *a_deriv)
     ParticleData all(pState, m_pAux);
 
     CalcBHArea(all);
-    BuiltTree(all);
+    BuildTree(all);
 
     #pragma omp parallel for
     for (int i=1; i<m_num; ++i)
